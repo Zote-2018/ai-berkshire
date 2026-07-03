@@ -23,3 +23,12 @@ reports/美团/command-log.jsonl
 
 # 组合报告只存本地，不公开
 reports/portfolio-latest.md
+
+# 项目本地安装的 Claude Code commands（由 skills/*.md 复制生成）
+.claude/commands/
+
+# 金融 AI 凭证（本地配置，含 token）
+.env
+
+# 金融 AI 缓存目录（含问答内容，可能涉密）
+data/fin_ai_cache/
