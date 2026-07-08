@@ -36,3 +36,10 @@ data/fin_ai_cache/
 # 调度 Pipeline 运行日志（含 stdout/stderr + cost，本地排查用）
 logs/scheduler/*.json
 !logs/scheduler/.gitkeep
+
+# 日扫描 SMTP 配置（含授权码，不能进库）
+.env.smtp
+
+# 日扫描运行日志（每次跑生成一个 JSON）
+logs/daily-monitor/
+!logs/daily-monitor/.gitkeep
