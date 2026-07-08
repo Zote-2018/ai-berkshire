@@ -129,8 +129,17 @@ def main(argv=None) -> int:
         return 0
 
     if args.cmd == "run":
-        print("[stub] run 尚未实现（Task 9）", file=sys.stderr)
-        return 0
+        from datetime import date
+        from tools.daily_monitor.runner import run
+        scan_date = date.today().isoformat()
+        result = run(
+            scan_date=scan_date,
+            send_email=not args.no_mail,
+            force_mail=args.force_mail,
+            dry_run=args.dry_run,
+            no_mail=args.no_mail,
+        )
+        return result.exit_code
 
     parser.error(f"未知子命令: {args.cmd}")  # 必抛 SystemExit(2)
 
