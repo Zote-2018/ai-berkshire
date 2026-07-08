@@ -295,12 +295,71 @@ def sort_and_filter(items: list, min_score: int = 3, top_n: int = 5):
     return strong, weak
 
 
+# fin_ai 内部 skill 名 / 文件名 / 元叙述词。这类词只会出现在"思考流"里，
+# 绝不出现在 fin_ai 给用户的实质观点中。命中即过滤整行。
+_FIN_AI_THOUGHT_KEYWORDS = (
+    "finqa-master",
+    "delegate_task",
+    "Plan 三件套",
+    "Step 2c",
+    "stock-one-pager",
+    "gangtise-data",
+    "gangtise-kb",
+    "gangtise-file",
+    "answer-writing",
+    "execution.md",
+    "plan.md",
+    "impeccable",
+    "template-2",
+    "第一批",
+    "第二批",
+)
+
+# 行首过程叙述（"我需要先"/"让我先"/"现在"等）。命中即过滤整行。
+_THOUGHT_PREFIXES = (
+    "我需要",
+    "让我先",
+    "让我快速",
+    "现在",
+    "好的，",
+    "需要直接",
+)
+
+
+def _clean_fin_ai_output(content: str, min_meaningful_lines: int = 3) -> str:
+    """清洗 fin_ai 输出，去掉过程叙述（思考流），保留实质观点。
+
+    fin_ai SSE 流有时会泄漏"我需要先加载 skill..."这类元叙述。本函数按行过滤：
+    1. 空行跳过
+    2. 包含内部 skill 名/文件名的行删除（finqa-master / delegate_task 等）
+    3. 以第一人称过程叙述开头的行删除（"我需要"/"让我"/"现在"等）
+
+    清洗后剩余行数 < min_meaningful_lines 时返回空字符串，让上游当
+    "未产出有效观点"处理（避免把 1-2 行残留当结论）。
+    """
+    if not content:
+        return ""
+    kept = []
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if any(kw in line for kw in _FIN_AI_THOUGHT_KEYWORDS):
+            continue
+        if any(line.startswith(p) for p in _THOUGHT_PREFIXES):
+            continue
+        kept.append(line)
+    if len(kept) < min_meaningful_lines:
+        return ""
+    return "\n\n".join(kept)
+
+
 def ask_fin_ai_opinion(candidates: list) -> dict:
     """调 fin_ai 批量问 top N 候选股的观点层。
 
     candidates: [{code, name, score, dividend_yield, pe, roe_mean}]
     返回: {summary: str, warnings: {code: str}, ok: bool, error: str}
-        失败时 ok=False，error 描述原因（配额耗尽/超时/网络）。
+        失败时 ok=False，error 描述原因（配额耗尽/超时/网络/仅产出思考流）。
     """
     if not candidates:
         return {"summary": "", "warnings": {}, "ok": True, "error": ""}
@@ -340,7 +399,11 @@ def ask_fin_ai_opinion(candidates: list) -> dict:
 
     try:
         result = ask(query, ttl_hours=24)
-        return {"summary": result.content, "warnings": {}, "ok": True, "error": ""}
+        cleaned = _clean_fin_ai_output(result.content)
+        if not cleaned:
+            return {"summary": "", "warnings": {}, "ok": False,
+                    "error": "fin_ai 仅产出思考流，未给出实质观点（建议重试）"}
+        return {"summary": cleaned, "warnings": {}, "ok": True, "error": ""}
     except Exception as e:
         return {"summary": "", "warnings": {}, "ok": False,
                 "error": f"fin_ai 调用失败: {e}"}

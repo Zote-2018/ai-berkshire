@@ -478,3 +478,55 @@ def test_run_stable_fin_ai_failure_degrades(monkeypatch, tmp_path):
     assert exit_code == 0  # fin_ai 失败不阻塞
     content = (tmp_path / "stable-20260704.md").read_text(encoding="utf-8")
     assert "⚠️" in content or "配额不足" in content
+
+
+from tools.stock_recommender import _clean_fin_ai_output
+
+
+def test_clean_fin_ai_output_空输入():
+    """空字符串 / None 都返回空字符串。"""
+    assert _clean_fin_ai_output("") == ""
+    assert _clean_fin_ai_output(None) == ""
+
+
+def test_clean_fin_ai_output_全思考流返回空():
+    """fin_ai 输出全部是过程叙述时，清洗后返回空，让上游判空降级。
+
+    Fixture 取自 2026-07-08 实际报告的 fin_ai 段（典型思考流样本）。
+    """
+    thought_stream = """我需要先加载 finqa-master skill，然后按照其流程来系统地评估这批股票。
+
+这是涉及10只个股的多公司比较评估问题，属于复杂路径（Step 2c）。
+
+好的，这是一个复杂的多公司比较评估问题。
+
+让我先加载必要的框架 skill。
+
+现在创建 Plan 三件套文件。
+
+第一批6只完成。现在获取剩余4只。
+
+现在生成 HTML。基于 impeccable 的 template-2 风格。"""
+    assert _clean_fin_ai_output(thought_stream) == ""
+
+
+def test_clean_fin_ai_output_保留有效观点():
+    """有效观点 + 少量思考流混合时，只保留有效段落。
+
+    Query 要求 fin_ai 输出 3 项结构化答案（排序/风险/top 推荐），
+    所以 min_meaningful_lines=3 时 3 行有效内容刚好通过。
+    """
+    mixed = """我需要先加载 finqa-master skill。
+
+1. 股息可持续性排序：600036 > 600926 > 600690 > 600887 > 601318
+2. 招行核心风险：房地产敞口，但不良率已拐头
+3. 强烈推荐 top 3：招行、杭银、海尔智家
+
+现在生成 HTML。"""
+    cleaned = _clean_fin_ai_output(mixed)
+    assert "600036 > 600926" in cleaned
+    assert "招行核心风险" in cleaned
+    assert "强烈推荐 top 3" in cleaned
+    # 2 行思考流被过滤
+    assert "finqa-master" not in cleaned
+    assert "生成 HTML" not in cleaned
