@@ -7,12 +7,21 @@ watchlist 是日扫描的核心配置：持仓 + 推荐池 + 阈值。
 """
 
 import json
+import os
 from datetime import date
 from pathlib import Path
 
 
 class WatchlistError(Exception):
     """watchlist 操作错误（文件格式错误、重复添加等）。"""
+
+
+DEFAULT_WATCHLIST_PATH = Path(
+    os.environ.get(
+        "DAILY_MONITOR_WATCHLIST",
+        str(Path(__file__).resolve().parent.parent.parent / "data" / "monitor" / "watchlist.json"),
+    )
+)
 
 
 DEFAULT_THRESHOLDS = {

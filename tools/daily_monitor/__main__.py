@@ -1,7 +1,7 @@
 """daily_monitor CLI 入口。
 
 子命令：
-    add-position CODE --buy-price N --shares N --buy-date YYYY-MM-DD
+    add-position CODE --buy-price N --shares N --buy-date YYYY-MM-DD [--name NAME]
     remove-position CODE
     sync-recommended
     show-watchlist
@@ -11,7 +11,9 @@
 """
 
 import argparse
+import json
 import sys
+from pathlib import Path
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -26,7 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_add.add_argument("--buy-price", type=float, required=True, help="买入价")
     p_add.add_argument("--shares", type=int, required=True, help="持仓股数")
     p_add.add_argument("--buy-date", required=True, help="买入日期 YYYY-MM-DD")
-    p_add.add_argument("--name", default="", help="股票名称（可选，自动抓取失败时用）")
+    p_add.add_argument("--name", default="", help="股票名称（可选）")
 
     p_rm = sub.add_parser("remove-position", help="删除持仓")
     p_rm.add_argument("code", help="股票代码")
@@ -40,9 +42,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("show-config", help="打印阈值配置")
 
     p_run = sub.add_parser("run", help="执行日扫描")
-    p_run.add_argument("--dry-run", action="store_true", help="只打印，不写文件不发邮件")
+    p_run.add_argument("--dry-run", action="store_true", help="只打印，不写不发")
     p_run.add_argument("--no-mail", action="store_true", help="跑但不发邮件")
-    p_run.add_argument("--force-mail", action="store_true", help="即使无异动也发邮件（测试用）")
+    p_run.add_argument("--force-mail", action="store_true", help="即使无异动也发")
 
     return parser
 
@@ -50,9 +52,64 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv=None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    print(f"[stub] 收到子命令: {args.cmd}", file=sys.stderr)
-    print(f"[stub] 参数: {vars(args)}", file=sys.stderr)
-    return 0
+
+    # 延迟 import，避免 CLI 解析时把所有模块都加载
+    from tools.daily_monitor.watchlist import (
+        DEFAULT_WATCHLIST_PATH, WatchlistError,
+        add_position, remove_position, load_watchlist,
+    )
+
+    if args.cmd == "add-position":
+        try:
+            add_position(
+                DEFAULT_WATCHLIST_PATH,
+                code=args.code,
+                name=args.name or args.code,
+                buy_price=args.buy_price,
+                shares=args.shares,
+                buy_date=args.buy_date,
+            )
+        except WatchlistError as e:
+            print(f"❌ {e}", file=sys.stderr)
+            return 1
+        print(f"✅ 已添加 {args.code}", file=sys.stderr)
+        return 0
+
+    if args.cmd == "remove-position":
+        try:
+            remove_position(DEFAULT_WATCHLIST_PATH, code=args.code)
+        except WatchlistError as e:
+            print(f"❌ {e}", file=sys.stderr)
+            return 1
+        print(f"✅ 已删除 {args.code}", file=sys.stderr)
+        return 0
+
+    if args.cmd == "show-watchlist":
+        from tools.daily_monitor.watchlist import load_watchlist
+        wl = load_watchlist(DEFAULT_WATCHLIST_PATH)
+        print(json.dumps(wl, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.cmd == "show-config":
+        from tools.daily_monitor.watchlist import DEFAULT_WATCHLIST_PATH, load_watchlist
+        wl = load_watchlist(DEFAULT_WATCHLIST_PATH)
+        print(json.dumps(wl["thresholds"], ensure_ascii=False, indent=2))
+        return 0
+
+    if args.cmd == "sync-recommended":
+        print("[stub] sync-recommended 尚未实现（Task 4）", file=sys.stderr)
+        return 0
+
+    if args.cmd == "show-snapshot":
+        print(f"[stub] show-snapshot 尚未实现（Task 5），date={args.date}", file=sys.stderr)
+        return 0
+
+    if args.cmd == "run":
+        print("[stub] run 尚未实现（Task 9）", file=sys.stderr)
+        return 0
+
+    parser.error(f"未知子命令: {args.cmd}")
+    return 2
 
 
 if __name__ == "__main__":
