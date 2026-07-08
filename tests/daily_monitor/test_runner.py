@@ -20,22 +20,25 @@ from tools.daily_monitor import runner
 
 @pytest.fixture
 def isolated_env(tmp_path, monkeypatch):
-    """隔离 watchlist / 快照 / 报告 / logs 目录到 tmp。"""
+    """隔离 watchlist / 快照 / 报告 / logs / stable-reports 目录到 tmp。"""
     watchlist_path = tmp_path / "watchlist.json"
     snapshot_dir = tmp_path / "snapshots"
     report_dir = tmp_path / "reports"
     log_dir = tmp_path / "logs"
-    for d in (snapshot_dir, report_dir, log_dir):
+    stable_dir = tmp_path / "stable-reports"
+    for d in (snapshot_dir, report_dir, log_dir, stable_dir):
         d.mkdir()
     monkeypatch.setattr(runner, "DEFAULT_WATCHLIST_PATH", watchlist_path)
     monkeypatch.setattr(runner, "DEFAULT_SNAPSHOT_DIR", snapshot_dir)
     monkeypatch.setattr(runner, "DEFAULT_REPORT_DIR", report_dir)
     monkeypatch.setattr(runner, "DEFAULT_LOG_DIR", log_dir)
+    monkeypatch.setattr(runner, "DEFAULT_STABLE_REPORT_DIR", stable_dir)
     return {
         "watchlist": watchlist_path,
         "snapshots": snapshot_dir,
         "reports": report_dir,
         "logs": log_dir,
+        "stable_reports": stable_dir,
     }
 
 
