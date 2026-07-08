@@ -203,6 +203,69 @@ python tools/stock_recommender.py stable --top 5
 - 配额：单次跑烧 1 次 fin_ai（80/天足够）
 - 设计 spec：`docs/superpowers/specs/2026-07-04-stock-recommender-design.md`
 
+## 日扫描系统
+
+每个交易日 03:00 自动扫描 watchlist（持仓 + 推荐池），异动时邮件提醒 + 给"建议跑的命令"清单。**零 LLM 配额**（纯 stdlib + 复用 stock_recommender 数据接口）。
+
+```bash
+# 维护 watchlist
+python tools/daily_monitor.py add-position 600036 --buy-price 38.5 --shares 1000 --buy-date 2026-03-15 --name 招商银行
+python tools/daily_monitor.py remove-position 600036
+python tools/daily_monitor.py sync-recommended   # 从最新 stable-{date}.md 同步
+
+# 运行
+python tools/daily_monitor.py run                 # 默认（带邮件）
+python tools/daily_monitor.py run --dry-run       # 只打印
+python tools/daily_monitor.py run --no-mail       # 不发邮件
+python tools/daily_monitor.py run --force-mail    # 即使无异动也发（测试用）
+
+# 查看
+python tools/daily_monitor.py show-watchlist
+python tools/daily_monitor.py show-config
+
+# 注册/卸载 Windows 任务计划程序（每个交易日 03:00）
+powershell -ExecutionPolicy Bypass -File scripts/install-daily-monitor.ps1
+powershell -ExecutionPolicy Bypass -File scripts/uninstall-daily-monitor.ps1
+```
+
+### 触发规则
+
+| 信号 | 默认阈值 | 严重度 | 建议命令 |
+|------|---------|:------:|---------|
+| 单日涨跌 | ±5% | 🟡 关注 | `/news-pulse {公司}` |
+| 5 日累计涨跌 | ±10% | 🟡 关注 | `/news-pulse {公司}` |
+| 跌破成本 | -15% | 🔴 紧急 | `/thesis-tracker {公司}` |
+| PE 进入击球区 | < 8 | 🟢 机会 | `/investment-checklist {公司}` |
+| PE 突破高估 | > 20 | 🔴 紧急 | `/thesis-tracker {公司}` |
+| 股息率升破 | ≥ 5% | 🟢 机会 | `/investment-checklist {公司}` |
+| 股息率跌破 | < 3% | 🔴 紧急 | `/thesis-tracker {公司}` |
+| PB 破净 | < 1 | 🟢 机会 | `/investment-checklist {公司}` |
+| 推荐池新进 | 4 分 | 🟢 机会 | `/investment-checklist {公司}` |
+| 推荐池跌出 | < 4 分 | 🔴 紧急 | `/thesis-tracker {公司}` |
+
+阈值在 `data/monitor/watchlist.json` 的 `thresholds` 字段，调整不用改代码。
+
+### SMTP 配置
+
+复制 `.env.smtp.example` 为 `.env.smtp`，填入 163 邮箱授权码（已在 .gitignore）。
+
+### 故障排查
+
+- **运行日志**：`logs/daily-monitor/{YYYYMMDD-HHMMSS}.json`
+- **快照**：`data/monitor/snapshot-{YYYY-MM-DD}.json`（保留 30 天）
+- **报告**：`reports/日扫描/{YYYY-MM-DD}.md`（仅触发时生成）
+- **手动触发**：`schtasks /run /tn "AI-Berkshire-Daily-Monitor"`
+- **退出码**：0=正常 / 2=全部行情失败 / 3=SMTP 失败 / 4=watchlist 空 / 5=watchlist 格式错
+
+### 节假日
+
+`data/zh-holidays.json` 每年初手动更新一次（10 分钟，来源：上交所休市安排）。
+
+### 设计文档
+
+- spec：`docs/superpowers/specs/2026-07-08-daily-monitor-design.md`
+- 实施计划：`docs/superpowers/plans/2026-07-08-daily-monitor.md`
+
 ## 调度 Pipeline
 
 Windows 任务计划程序 + Claude Code headless 模式定时触发 skill。MVP 含 2 个任务：
