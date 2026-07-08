@@ -13,6 +13,7 @@
 import argparse
 import json
 import sys
+from pathlib import Path
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -94,7 +95,33 @@ def main(argv=None) -> int:
         return 0
 
     if args.cmd == "sync-recommended":
-        print("[stub] sync-recommended 尚未实现（Task 4）", file=sys.stderr)
+        from datetime import date
+        # 找最新的 stable-{date}.md（按文件名降序排，最新的在前）
+        reports_dir = Path(__file__).resolve().parent.parent.parent / "reports" / "股票推荐"
+        if not reports_dir.exists():
+            print(f"❌ 报告目录不存在: {reports_dir}", file=sys.stderr)
+            return 1
+        candidates = sorted(reports_dir.glob("stable-*.md"), reverse=True)
+        if not candidates:
+            print(f"❌ {reports_dir} 下无 stable-*.md 报告", file=sys.stderr)
+            return 1
+        latest = candidates[0]
+        from tools.daily_monitor.watchlist import sync_recommended
+        try:
+            wl = sync_recommended(
+                DEFAULT_WATCHLIST_PATH, latest,
+                checked_date=date.today().isoformat(),
+            )
+        except Exception as e:
+            print(f"❌ 同步失败: {e}", file=sys.stderr)
+            return 1
+        active = [r for r in wl["recommended"] if r["still_recommended"]]
+        print(
+            f"✅ 同步完成：{len(active)} 只活跃推荐"
+            f"（共 {len(wl['recommended'])} 条记录）",
+            file=sys.stderr,
+        )
+        print(f"   报告：{latest.name}", file=sys.stderr)
         return 0
 
     if args.cmd == "show-snapshot":
