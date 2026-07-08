@@ -125,7 +125,13 @@ def main(argv=None) -> int:
         return 0
 
     if args.cmd == "show-snapshot":
-        print(f"[stub] show-snapshot 尚未实现（Task 5），date={args.date}", file=sys.stderr)
+        from tools.daily_monitor.snapshot import load_snapshot
+        snapshot_path = DEFAULT_WATCHLIST_PATH.parent / f"snapshot-{args.date}.json"
+        snap = load_snapshot(snapshot_path)
+        if snap is None:
+            print(f"❌ 快照不存在：{snapshot_path}", file=sys.stderr)
+            return 1
+        print(json.dumps(snap, ensure_ascii=False, indent=2))
         return 0
 
     if args.cmd == "run":

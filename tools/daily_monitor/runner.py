@@ -22,7 +22,7 @@
 import json
 import sys
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from tools.daily_monitor.holidays import is_holiday
@@ -143,6 +143,43 @@ def _generate_report_md(scan_date: str, market_date: str, result_summary: dict) 
     return "\n".join(lines)
 
 
+def _write_log(
+    *,
+    scan_date: str,
+    result: RunResult,
+    failures: list | None = None,
+    dry_run: bool = False,
+    no_mail: bool = False,
+    force_mail: bool = False,
+) -> None:
+    """写运行日志到 DEFAULT_LOG_DIR/{YYYYMMDD-HHMMSS}.json。
+
+    所有 early return 路径都调用本函数，确保故障排查入口完整。
+    failures 为 None 表示在拉数据阶段之前就退出（节假日/watchlist 错误）。
+    """
+    DEFAULT_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    log_time = datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "scan_date": scan_date,
+        "exit_code": result.exit_code,
+        "total_scanned": result.total_scanned,
+        "triggered_count": result.triggered_count,
+        "triggered_codes": result.triggered_codes,
+        "failures": failures if failures is not None else [],
+        "error": result.error,
+        "dry_run": dry_run,
+        "no_mail": no_mail,
+        "force_mail": force_mail,
+    }
+    log_path = DEFAULT_LOG_DIR / f"{log_time}.json"
+    log_path.write_text(
+        json.dumps(log_entry, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    print(f"[log] 运行日志：{log_path}", file=sys.stderr)
+
+
 def run(
     *,
     scan_date: str,
@@ -159,6 +196,7 @@ def run(
     # 1. 节假日检查
     if is_holiday(scan_date):
         print(f"[info] {scan_date} 是节假日，跳过扫描", file=sys.stderr)
+        _write_log(scan_date=scan_date, result=result)
         return result  # exit_code=0
 
     # 2. 加载 watchlist
@@ -168,6 +206,7 @@ def run(
         print(f"❌ watchlist 格式错误: {e}", file=sys.stderr)
         result.exit_code = 5
         result.error = str(e)
+        _write_log(scan_date=scan_date, result=result)
         return result
 
     positions = wl.get("positions", [])
@@ -191,6 +230,7 @@ def run(
             file=sys.stderr,
         )
         result.exit_code = 4
+        _write_log(scan_date=scan_date, result=result)
         return result
 
     # 3. 同步推荐池（最新 stable-*.md 比上次更新则刷一次，不阻塞主流程）
@@ -262,6 +302,10 @@ def run(
         )
         result.exit_code = 2
         result.error = f"all {len(failures)} stocks failed"
+        _write_log(
+            scan_date=scan_date, result=result, failures=failures,
+            dry_run=dry_run, no_mail=no_mail, force_mail=force_mail,
+        )
         return result
 
     # 6. 信号判定
@@ -369,5 +413,9 @@ def run(
     print(
         f"[done] 扫描 {result.total_scanned} 只，触发 {result.triggered_count} 只",
         file=sys.stderr,
+    )
+    _write_log(
+        scan_date=scan_date, result=result, failures=failures,
+        dry_run=dry_run, no_mail=no_mail, force_mail=force_mail,
     )
     return result
