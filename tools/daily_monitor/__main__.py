@@ -13,7 +13,6 @@
 import argparse
 import json
 import sys
-from pathlib import Path
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -85,13 +84,11 @@ def main(argv=None) -> int:
         return 0
 
     if args.cmd == "show-watchlist":
-        from tools.daily_monitor.watchlist import load_watchlist
         wl = load_watchlist(DEFAULT_WATCHLIST_PATH)
         print(json.dumps(wl, ensure_ascii=False, indent=2))
         return 0
 
     if args.cmd == "show-config":
-        from tools.daily_monitor.watchlist import DEFAULT_WATCHLIST_PATH, load_watchlist
         wl = load_watchlist(DEFAULT_WATCHLIST_PATH)
         print(json.dumps(wl["thresholds"], ensure_ascii=False, indent=2))
         return 0
@@ -108,8 +105,7 @@ def main(argv=None) -> int:
         print("[stub] run 尚未实现（Task 9）", file=sys.stderr)
         return 0
 
-    parser.error(f"未知子命令: {args.cmd}")
-    return 2
+    parser.error(f"未知子命令: {args.cmd}")  # 必抛 SystemExit(2)
 
 
 if __name__ == "__main__":
