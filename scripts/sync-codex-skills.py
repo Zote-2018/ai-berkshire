@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Codex skills from AI Berkshire Claude command files."""
+"""Sync skills/*.md to codex-skills/*/SKILL.md (with Codex adapter) and .claude/commands/*.md (verbatim)."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CLAUDE_SKILLS = ROOT / "skills"
 CODEX_SKILLS = ROOT / "codex-skills"
+CLAUDE_COMMANDS = ROOT / ".claude" / "commands"
 
 
 def split_frontmatter(text: str) -> tuple[str | None, str]:
@@ -98,6 +99,7 @@ def main() -> None:
 
     if not check:
         CODEX_SKILLS.mkdir(exist_ok=True)
+        CLAUDE_COMMANDS.mkdir(parents=True, exist_ok=True)
 
     count = 0
     stale: list[str] = []
@@ -115,6 +117,7 @@ def main() -> None:
         else:
             target_dir.mkdir(parents=True, exist_ok=True)
             target.write_text(content, encoding="utf-8")
+            (CLAUDE_COMMANDS / source.name).write_text(source_text, encoding="utf-8")
         count += 1
 
     if check:
@@ -127,6 +130,7 @@ def main() -> None:
         return
 
     print(f"Generated {count} Codex skills in {CODEX_SKILLS.relative_to(ROOT)}")
+    print(f"Synced {count} commands to {CLAUDE_COMMANDS.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

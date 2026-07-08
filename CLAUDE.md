@@ -27,7 +27,7 @@ AGENTS.md        — Codex 行为约束（与 CLAUDE.md 平行，互不重复）
 ai_CLAUDE.md     — AI 协作记忆文件（用户画像、项目演进、已知问题）
 ```
 
-**关键事实**：`skills/*.md` 是 workflow 唯一源文件。修改 skills/ 后必须跑 `sync-codex-skills.py` 同步给 Codex，不要手改 codex-skills/。
+**关键事实**：`skills/*.md` 是 workflow 唯一源文件。修改 skills/ 后必须跑 `sync-codex-skills.py` 同步到 **codex-skills/** 和项目级 **.claude/commands/**（一次跑两边都更新）。不要手改 codex-skills/ 或 .claude/commands/。
 
 ## 报告目录结构
 
@@ -134,10 +134,10 @@ python tools/financial_rigor.py calc --expr '510 * 9.11e9'
 
 | 脚本 | 用途 |
 |------|------|
-| `install-claude-commands.sh` | 把 skills/*.md 复制到 `~/.claude/commands/` 全局可用 |
+| `install-claude-commands.sh` | 把 skills/*.md 复制到 `~/.claude/commands/` 全局可用（项目级 `.claude/commands/` 由 `sync-codex-skills.py` 维护，不用这个） |
 | `install-codex-skills.sh` | 安装 Codex skills 到 `~/.codex/skills` |
 | `install-codex-prompts.sh` | 安装 Codex slash prompts |
-| `sync-codex-skills.py` | **改 skills/ 后必跑**：从 skills/*.md 重新生成 codex-skills/*/SKILL.md |
+| `sync-codex-skills.py` | **改 skills/ 后必跑**：生成 `codex-skills/*/SKILL.md` **+ 同步到项目级 `.claude/commands/*.md`**（一次跑两边都更新） |
 | `sync-codex-prompts.py` | 同步 Codex slash prompts 兼容层 |
 
 校验是否同步（不写文件）：`python scripts/sync-codex-skills.py --check`
@@ -146,8 +146,8 @@ python tools/financial_rigor.py calc --expr '510 * 9.11e9'
 
 本项目同时支持 Claude Code 和 Codex，**canonical workflow 源在 `skills/*.md`**：
 
-- 改 `skills/*.md` → 跑 `sync-codex-skills.py` → 提交 codex-skills/ 的生成结果
-- 不要手改 `codex-skills/*/SKILL.md`，下次 sync 会覆盖
+- 改 `skills/*.md` → 跑 `sync-codex-skills.py` → 同步到 codex-skills/ 和 `.claude/commands/` → 只提交 codex-skills/ 的结果（`.claude/commands/` 在 .gitignore 里）
+- 不要手改 `codex-skills/*/SKILL.md` 或 `.claude/commands/*.md`，下次 sync 会覆盖
 - Codex 专属行为写在 `AGENTS.md`，Claude Code 专属行为写在本文件，**互不重复**
 - 仅 Codex 用的 hand-written 包需在 codex-skills/ 中标注，且不要建同名 skills/*.md
 
@@ -262,7 +262,7 @@ python -m tools.scheduler add-theme "AI算力"
 - PE/ROE 等指标用 `tools/financial_rigor.py` 精确计算，禁用 LLM 心算
 - 报告发布前用 `tools/report_audit.py` 做合规审计（数据来源、置信度标注）
 - 关键数据至少 2 个独立来源交叉验证，误差 >1% 告警
-- 改 skills/ 后必须跑 `scripts/sync-codex-skills.py` 同步 Codex（用 `--check` 仅校验不写）
+- 改 skills/ 后必须跑 `scripts/sync-codex-skills.py` 同步 Codex + 项目级 .claude/commands/（`--check` 仅校验 codex-skills/）
 - Windows Git Bash 下用 `python` 不用 `python3`；所有路径用正斜杠
 - 报告写完后主动询问是否推送到 GitHub
 - 本项目仅供学习研究，不构成投资建议
