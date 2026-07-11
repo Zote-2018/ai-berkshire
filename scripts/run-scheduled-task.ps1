@@ -1,4 +1,4 @@
-# scripts/run-scheduled-task.ps1
+﻿# scripts/run-scheduled-task.ps1
 # Windows 任务计划程序的实际入口：被计划程序拉起后，切到 repo 跑 python -m tools.scheduler。
 #
 # 用法：
@@ -45,9 +45,14 @@ if ($Skill -eq "industry-funnel") {
     $argList += @("--from-queue")
 }
 
+# 调外部命令时把 ErrorActionPreference 切到 Continue：python 写 stderr（_emit 日志）不能被
+# 当作 PowerShell 异常抛进 catch（"$ErrorActionPreference=Stop" + 外部命令 stderr 经典坑）。
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 try {
     & python @argList
     $exitCode = $LASTEXITCODE
+    $ErrorActionPreference = $prevEAP
     if ($exitCode -ne 0) {
         Write-Log ERROR "$Skill 失败，exit=$exitCode"
         exit $exitCode
@@ -55,6 +60,7 @@ try {
     Write-Log INFO "$Skill 成功完成"
     exit 0
 } catch {
+    $ErrorActionPreference = $prevEAP
     Write-Log ERROR "调度异常: $_"
     exit 1
 }

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 注册 AI-Berkshire-Daily-Monitor 到 Windows 任务计划程序（每个交易日 03:00）。
 
