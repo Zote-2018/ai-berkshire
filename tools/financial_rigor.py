@@ -21,6 +21,15 @@ import math
 import sys
 from decimal import Decimal, Context, ROUND_HALF_EVEN, InvalidOperation
 
+# Windows 控制台默认 GBK 编码无法输出 emoji（⚠️✅❌），强制 UTF-8。
+# 必须在脚本顶部执行，早于任何 print。
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # ---------------------------------------------------------------------------
 # Exact Decimal Engine (no floating-point drift)
 # ---------------------------------------------------------------------------
