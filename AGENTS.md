@@ -1,67 +1,281 @@
-# AI Berkshire Codex Guide
+<!-- init: 2026-08-16 code-scan -->
+# AI Berkshire — 项目指令（AGENTS.md）
 
-This repository contains investment research workflows, reports, and shared
-validation tools. Keep compatibility with both Claude Code and Codex users.
+基于 Claude Code / Codex 的价值投资研究 Skill 合集。四大师框架：巴菲特、芒格、段永平、李录。
+GitHub: `https://github.com/Zote-2018/ai-berkshire.git`（2026-09 起为独立仓库，基于 xbtlin/ai-berkshire 2026-07-04 快照独立演进），本地克隆 `~/ai-berkshire/`。
+本文件是双端通用项目指令（2026-08-16 由原英文 AGENTS.md 的 Codex 行为约束与 CLAUDE.md
+合并去重而来）；`CLAUDE.md` 仍保留为 Claude Code 入口，互不重复。工具路径保持与文档约定
+兼容（`~/ai-berkshire/tools/...`）。本项目仅供学习研究，不构成投资建议。
 
-## Project Layout
+核心卖点（详见 README.md）：强制给结论不打太极 / 四大师视角对抗 / 结构化反偏见机制 /
+金融数据精确计算（Decimal）/ 可复现研究流程 / 多 Agent 并行深度 / 连续两年实盘跑赢
+全球主要指数 40-50 个百分点。
 
-- `skills/*.md`: Claude Code slash-command source files.
-- `codex-skills/*/SKILL.md`: Codex skill packages. Most are generated from
-  `skills/*.md`; Codex-only hand-written packages are allowed when clearly
-  marked and no same-named `skills/*.md` source exists.
-- `codex-prompts/*.md`: generated Codex custom prompts for slash-command
-  style entry points. These are a compatibility layer; skills remain preferred.
-- `tools/*.py`: shared financial validation and data tools used by both systems.
-- `reports/`: research outputs. Do not rewrite unrelated reports while changing
-  tooling or skills.
-- `scripts/sync-codex-skills.py`: regenerates Codex skills from `skills/*.md`.
-- `scripts/install-codex-skills.sh`: installs Codex skills locally.
-- `scripts/install-codex-prompts.sh`: installs generated Codex slash prompts
-  locally.
-- `scripts/install-claude-commands.sh`: installs Claude Code commands locally.
+## 项目结构（2026-08-16 代码实测）
 
-## Compatibility Rules
+```
+skills/             — 19 个 Claude Code slash-command 源文件（canonical workflow 唯一源）
+codex-skills/       — 20 个 Codex skill 包（19 个由 sync 脚本生成 + 1 个 Codex-only 手写包）
+codex-prompts/      — 18 个 Codex slash prompt 兼容层（可选；skills 仍是首选入口）
+.claude/commands/   — 19 个项目级 Claude 命令（sync 脚本生成，在 .gitignore 中）
+scripts/            — 10 个安装/同步/调度脚本（见"脚本"表）
+tools/              — Python 金融工具：10 个顶层 .py + 3 个包（daily_monitor/ fin_ai/ scheduler/）
+tests/              — pytest 测试 15 个文件：daily_monitor(9) + fin_ai(5) + scheduler(1)
+reports/            — 研究输出：191 项 = 117 个公司/主题目录 + 74 个根目录文件
+data/               — 缓存数据（见下表）
+logs/               — daily-monitor/ 与 scheduler/ 运行日志（JSON，均在 .gitignore）
+docs/               — ROADMAP.md + superpowers/specs×4 + superpowers/plans×4
+assets/  筛选公司/  实盘记录/ — 静态资源与本地研究资料
+ai_CLAUDE.md        — AI 协作记忆文件（用户画像、项目演进、已知问题）
+requirements.txt    — 仅 httpx>=0.27（近 stdlib 栈，新增依赖需谨慎）
+.editorconfig       — 通用 2 空格 / Python 4 空格 / LF / UTF-8
+```
 
-- Treat `skills/*.md` as the canonical workflow source.
-- After changing any file in `skills/`, run:
-  `python3 scripts/sync-codex-skills.py`
-- If slash prompt compatibility is needed, also run:
-  `python3 scripts/sync-codex-prompts.py`
-- Do not manually edit generated `codex-skills/*/SKILL.md` unless also updating
-  the corresponding source in `skills/`.
-- For Codex-only hand-written packages under `codex-skills/`, keep them clearly
-  marked as Codex-only and do not create a same-named `skills/*.md` file unless
-  intentionally adopting the workflow for Claude Code too.
-- Keep tool paths compatible with the documented checkout path:
-  `~/ai-berkshire/tools/...`
-- Keep `CLAUDE.md` for Claude Code behavior and this `AGENTS.md` for Codex
-  behavior.
+### data/ 关键文件
 
-## Research Quality Rules
+- `monitor/watchlist.json`：日扫描 watchlist（持仓 + 推荐池 + `thresholds` 字段；调阈值不用改代码）。
+  根目录 `watchlist.json` 是美股 AI 关注列表（us_ai_chip / us_ai_app 等），两回事。
+- `zh-holidays.json`：A 股节假日表。**每年初手动更新一次**（约 10 分钟，来源：上交所休市安排）。
+- `industry_funnel_queue.json`：月度 industry-funnel 调度主题队列。
+- `fin_ai_cache/`：fin_ai 问答缓存（可能涉密，.gitignore）。
+- 其余：fundamentals.json、index_constituents.json、晨星公允价值 CSV、相关性 CSV 等缓存。
 
-- Before starting any research, run the `date` command to confirm today's
-  date. Treat that date as the baseline for "latest" data (prices, market cap,
-  most recent filings), and state the data cutoff date in the report header.
-  Never assume the current date from training data.
-- Financial data must come from at least two independent sources when the skill
-  requires verification.
-- Use exact arithmetic tools for market cap, valuation, cross-source checks, and
-  scenario analysis:
-  `python3 tools/financial_rigor.py ...`
-- Use report audit tooling before treating generated research as publishable:
-  `python3 tools/report_audit.py ...`
-- Clearly label low-confidence conclusions, incomplete data, and source gaps.
-- This project is for learning and research, not investment advice.
+**关键事实**：`skills/*.md` 是 workflow 唯一源文件。修改 skills/ 后必须跑
+`python scripts/sync-codex-skills.py`，一次同步两边：`codex-skills/*/SKILL.md` +
+项目级 `.claude/commands/*.md`。不要手改 codex-skills/ 或 .claude/commands/（下次 sync
+会覆盖）；提交只提交 codex-skills/ 的结果（`.claude/commands/` 在 .gitignore 里）。
 
-## Editing Rules
+## Skills 全景（19 个，按场景选用）
 
-- Preserve existing report files unless the task specifically asks to change
-  them.
-- Keep changes scoped to the requested skill, tool, script, or documentation.
-- Before finishing a skill/tool change, run the relevant syntax or generation
-  check. For compatibility changes, run:
-  `python3 scripts/sync-codex-skills.py`
-- To verify generated Codex artifacts are current without rewriting files, run:
-  `python3 scripts/sync-codex-skills.py --check`
-  and, when slash prompts are relevant:
-  `python3 scripts/sync-codex-prompts.py --check`
+| 类别 | Skill | 用途 |
+|------|-------|------|
+| 🔬 深度研究 | `/investment-research` `/investment-team` `/management-deep-dive` `/private-company-research` `/deep-company-series` | 单公司全方位研究；多 Agent 并行最快；管理层/未上市公司/公众号级系列 |
+| 📊 财报分析 | `/earnings-review` `/earnings-team` | 一手财报精读；四大师并行 + 公众号发布 |
+| 🏭 行业筛选 | `/industry-research` `/industry-funnel` `/quality-screen` `/bottleneck-hunter` `/investment-checklist` | 产业链全景；漏斗精选；去劣筛 7 条硬指标；供应链瓶颈；买入前 6 关 |
+| 📈 持仓管理 | `/portfolio-review` `/thesis-tracker` `/news-pulse` `/stock-recommend` | 组合管理；论文追踪；股价异动 10 分钟归因；按偏好推荐 N 支候选股 |
+| 🧠 思维工具 | `/dyp-ask` `/financial-data` `/wechat-article` | 段永平问答；财务数据交叉验证规范；公众号文章三 Agent 协作 |
+
+调用示例：`/investment-research 腾讯`、`/industry-funnel AI算力`、`/news-pulse 拼多多 跌12% 一周内`。
+
+## Codex / Claude Code 双端兼容规则
+
+- canonical 源在 `skills/*.md`；改后必跑 `sync-codex-skills.py`（同步 codex-skills/ 与
+  .claude/commands/ 两边）；需要 slash prompt 兼容层时再跑 `sync-codex-prompts.py`。
+- 校验生成物是否最新（不写文件）：`sync-codex-skills.py --check`（仅校验 codex-skills/）；
+  prompt 相关时加 `sync-codex-prompts.py --check`。
+- Codex-only 手写包（当前仅 `codex-skills/investment-memo-craft/`，投资报告写作与排版
+  overlay）必须在包内明确标注 Codex-only，且不建同名 `skills/*.md`，除非有意收编为
+  Claude Code workflow。
+- Codex 专属行为写在 AGENTS.md，Claude Code 专属行为写在 CLAUDE.md，互不重复。
+
+## 报告目录结构与命名规范
+
+所有公司报告按**公司名**建文件夹（共 117 个目录，如 `腾讯/` 含其全部 research/earnings/
+thesis 报告，`AI产业研究/` 为置顶专题）；行业/漏斗/主题/组合/多公司报告放根目录：
+
+```
+reports/核电-industry-20260409.md          — 行业报告
+reports/AI算力-funnel-20260509.md          — 漏斗筛选报告
+reports/AI-轮动判断-20260509.md            — 主题级综合判断报告
+reports/portfolio-latest.md                — 组合报告（持续更新；只存本地，.gitignore）
+reports/多公司对比-checklist-20260408.md    — 多公司报告
+```
+
+### 报告命名规范
+
+| Skill | 文件命名格式 | 示例 |
+|------|---------|------|
+| /investment-team | `{公司名}/` 目录内含4个视角+最终报告 | `reports/拼多多/最终报告.md` |
+| /investment-research | `{公司名}-research-{YYYYMMDD}.md` | `reports/腾讯/腾讯-research-20260408.md` |
+| /investment-checklist | `{公司名}-checklist-{YYYYMMDD}.md` | `reports/腾讯/腾讯-checklist-20260408.md` |
+| /industry-research | `{行业名}-industry-{YYYYMMDD}.md`（根目录） | `reports/核电-industry-20260409.md` |
+| /industry-funnel | `{行业名}-funnel-{YYYYMMDD}.md`（根目录） | `reports/AI算力-funnel-20260509.md` |
+| /private-company-research | `{公司名}-private-{YYYYMMDD}.md` | `reports/字节跳动/字节跳动-private-20260408.md` |
+| /earnings-review | `{公司名}-earnings-{期间}.md` | `reports/腾讯/腾讯-earnings-2025Q4.md` |
+| /earnings-team | `{公司名}/` 目录内含4个大师视角+研究底稿+公众号文章+读者评审 | `reports/腾讯/腾讯-earnings-2025Q4.md`（公众号定稿） |
+| /thesis-tracker | `{公司名}-thesis.md`（长期维护） | `reports/腾讯/腾讯-thesis.md` |
+| /portfolio-review | `portfolio-latest.md`（根目录，持续更新） | `reports/portfolio-latest.md` |
+| /management-deep-dive | `{公司名}-management-{YYYYMMDD}.md` | `reports/腾讯/腾讯-management-20260409.md` |
+
+/investment-team 目录结构：`README.md`（框架概览+核心结论）、`01-商业模式分析-段永平视角.md`、
+`02-财务估值分析-巴菲特视角.md`、`03-行业竞争分析-芒格视角.md`、`04-风险管理层评估-李录视角.md`、
+`最终报告.md`（Team Lead 综合报告）。
+
+## 投研分析核心原则（最高优先级）
+
+- 开始任何研究前先跑 `date` 命令确认今天日期，作为"最新数据"（价格、市值、最新财报）的
+  基线，并在报告头部写明数据截止日。**禁止**用训练数据里的日期冒充当前日期。
+- **客观、客观、客观**——严禁主观臆断；严格区分"事实"与"观点"（观点必须明确标注）。
+- **不预设立场**：先摆数据、再推逻辑、最后得结论，结论必须从数据中自然推出；禁止
+  "我认为"、"我觉得"、"显然"，改用"数据显示"、"证据表明"、"根据XX来源"。
+- **呈现正反两面**：每个核心判断都必须附带反面论据（"但另一方面..."）。
+- 对不确定的事情诚实说"不确定"或"数据不足"，不用推测填充确定性；低置信度结论、不完整
+  数据、来源缺口都要清楚标注。
+- 市值必须手算校验（股价 × 总股本 vs 报告值）；货币单位要明确（港币/人民币/美元）。
+- **金融 AI（gangtise-reason）数据源优先**：当 fin_ai 有数据时，**以 fin_ai 为准确源**
+  （B 级以下公司经验证比 WebSearch/东方财富更准——小商品城样本 fin_ai ROE 17.53% vs
+  WebSearch 12.96%/4.15%）。但 PE/PB/ROE 等估值指标仍走 `tools/financial_rigor.py`
+  精确计算（Decimal，禁用 float、禁用 LLM 心算）。fin_ai 提供输入数据，financial_rigor
+  做精确计算，**两者协同而非替代**。fin_ai 无数据/超时/无配额时 fallback 到 WebSearch+年报。
+- 所有 skill（investment-team、investment-research、earnings-review 等）执行时都必须遵守
+  以上原则。
+
+## 工具与脚本
+
+### Python 工具（`tools/`）
+
+所有金融计算走 `decimal.Decimal`，**禁用 float**（PE 算错一位小数点 = 投资决策错）。
+`tools/daily_monitor.py` 是兼容性 stub，实际实现在 `tools/daily_monitor/` 包。
+
+| 工具 | 用途 |
+|------|------|
+| `financial_rigor.py` | 市值验算 / 估值验算 / 多源交叉验证 / 三情景估值 / Benford 检测 / 精确计算器 |
+| `report_audit.py` | 报告发布前的合规性审计（数据来源、置信度标注） |
+| `ashare_data.py` | A 股行情+财务（腾讯行情+东方财富，零外部依赖） |
+| `xueqiu_scraper.py` | 雪球数据抓取（含登录态缓存，详见 .gitignore） |
+| `morningstar_fair_value.py` / `stock_screener.py` | Morningstar 公允价值拉取 / 股票筛选 |
+| `stock_recommender.py` | /stock-recommend 单文件 CLI（约 400 行，纯 stdlib） |
+| `momentum_backtest.py` / `momentum_backtest_v2.py` | 动量回测 |
+| `fin_ai/` | 金融 AI（gangtise-reason）SSE 问答客户端：观点/研报/事件解读。CLI: `python -m tools.fin_ai ask "..."` / Python: `from tools.fin_ai import ask` |
+| `daily_monitor/` | 日扫描包（watchlist/signals/snapshot/mail/holidays 等 9 模块） |
+| `scheduler/` | 调度包（runner + CLI 入口） |
+
+`financial_rigor.py` 子命令（`--help` 看完整参数）：
+
+```bash
+python tools/financial_rigor.py verify-market-cap --price 510 --shares 9.11e9 --reported 4.65e12 --currency HKD  # 市值手算校验
+python tools/financial_rigor.py verify-valuation --price 510 --eps 23.5 --bvps 120   # PE/PB/ROE/FCF Yield
+python tools/financial_rigor.py cross-validate --field revenue --values '{"年报": 7518, "Yahoo": 7500}' --unit 亿  # 多源交叉验证
+python tools/financial_rigor.py three-scenario ...                                    # 三情景估值（乐观/中性/悲观）
+python tools/financial_rigor.py calc --expr '510 * 9.11e9'                            # 任意表达式精确计算
+```
+
+> Windows Git Bash 用 `python`，不是 `python3`（Windows 默认不创建 python3 软链接）；
+> 所有路径用正斜杠。
+
+### 脚本（`scripts/`，10 个）
+
+| 脚本 | 用途 |
+|------|------|
+| `install-claude-commands.sh` | 把 skills/*.md 复制到 `~/.claude/commands/` 全局可用（项目级 `.claude/commands/` 由 sync-codex-skills.py 维护，不用这个） |
+| `install-codex-skills.sh` / `install-codex-prompts.sh` | 安装 Codex skills 到 `~/.codex/skills` / 安装 Codex slash prompts |
+| `sync-codex-skills.py` | **改 skills/ 后必跑**：生成 `codex-skills/*/SKILL.md` + 同步项目级 `.claude/commands/*.md` |
+| `sync-codex-prompts.py` | 同步 Codex slash prompts 兼容层 |
+| `install-daily-monitor.ps1` / `uninstall-daily-monitor.ps1` | 注册/卸载日扫描计划任务 |
+| `install-windows-tasks.ps1` / `uninstall-windows-tasks.ps1` | 注册/卸载调度 Pipeline 计划任务 |
+| `run-scheduled-task.ps1` | 任务计划程序实际入口 |
+
+## /stock-recommend 推荐系统
+
+A 股稳定收益推荐：扫描中证红利 + 上证 50 成分股（约 100 只），按 4 维硬指标打分
+（股息率 TTM / PE / ROE 均值 / ROE 稳定性）+ fin_ai 观点层。CLI：
+`python tools/stock_recommender.py stable --top 5`；输出 `reports/股票推荐/stable-{YYYYMMDD}.md`。
+配额：单次跑烧 1 次 fin_ai（80/天足够）。
+设计 spec：`docs/superpowers/specs/2026-07-04-stock-recommender-design.md`。
+
+## 日扫描系统
+
+每个交易日 03:00 自动扫描 watchlist（持仓 + 推荐池），异动时邮件提醒 + 给"建议跑的
+命令"清单。**零 LLM 配额**（纯 stdlib + 复用 stock_recommender 数据接口）。
+
+```bash
+python tools/daily_monitor.py add-position 600036 --buy-price 38.5 --shares 1000 --buy-date 2026-03-15 --name 招商银行
+python tools/daily_monitor.py remove-position 600036
+python tools/daily_monitor.py sync-recommended    # 从最新 stable-{date}.md 同步推荐池
+python tools/daily_monitor.py run                 # 默认（带邮件）；--dry-run 只打印
+python tools/daily_monitor.py run --no-mail       # 不发邮件
+python tools/daily_monitor.py run --force-mail    # 即使无异动也发（测试用）
+python tools/daily_monitor.py show-watchlist && python tools/daily_monitor.py show-config
+powershell -ExecutionPolicy Bypass -File scripts/install-daily-monitor.ps1    # 注册计划任务（交易日 03:00）
+powershell -ExecutionPolicy Bypass -File scripts/uninstall-daily-monitor.ps1  # 卸载
+```
+
+### 触发规则（阈值在 `data/monitor/watchlist.json` 的 `thresholds`，调整不用改代码）
+
+| 信号 | 默认阈值 | 严重度 | 建议命令 |
+|------|---------|:------:|---------|
+| 单日涨跌 | ±5% | 🟡 关注 | `/news-pulse {公司}` |
+| 5 日累计涨跌 | ±10% | 🟡 关注 | `/news-pulse {公司}` |
+| 跌破成本 | -15% | 🔴 紧急 | `/thesis-tracker {公司}` |
+| PE 进入击球区 | < 8 | 🟢 机会 | `/investment-checklist {公司}` |
+| PE 突破高估 | > 20 | 🔴 紧急 | `/thesis-tracker {公司}` |
+| 股息率升破 | ≥ 5% | 🟢 机会 | `/investment-checklist {公司}` |
+| 股息率跌破 | < 3% | 🔴 紧急 | `/thesis-tracker {公司}` |
+| PB 破净 | < 1 | 🟢 机会 | `/investment-checklist {公司}` |
+| 推荐池新进 | 4 分 | 🟢 机会 | `/investment-checklist {公司}` |
+| 推荐池跌出 | < 4 分 | 🔴 紧急 | `/thesis-tracker {公司}` |
+
+- SMTP：复制 `.env.smtp.example` 为 `.env.smtp`，填 163 邮箱授权码（已在 .gitignore）。
+- 故障排查：日志 `logs/daily-monitor/{YYYYMMDD-HHMMSS}.json`；快照
+  `data/monitor/snapshot-{YYYY-MM-DD}.json`（保留 30 天）；报告
+  `reports/日扫描/{YYYY-MM-DD}.md`（仅触发时生成）；手动触发
+  `schtasks /run /tn "AI-Berkshire-Daily-Monitor"`。
+- **退出码约定**：0=正常 / 2=全部行情失败 / 3=SMTP 失败 / 4=watchlist 空 / 5=watchlist 格式错。
+- 设计文档：spec `docs/superpowers/specs/2026-07-08-daily-monitor-design.md` +
+  实施计划 `docs/superpowers/plans/2026-07-08-daily-monitor.md`。
+
+## 调度 Pipeline
+
+Windows 任务计划程序 + Claude Code headless 模式定时触发 skill。MVP 含 2 个任务：
+
+| 任务 | 触发 | skill | 输入 |
+|------|------|-------|------|
+| `AI-Berkshire-Portfolio-Weekly` | 每周日 03:00 | `portfolio-review` | "我的持仓"（读 `reports/portfolio-latest.md`） |
+| `AI-Berkshire-Industry-Monthly` | 每月 1 号 03:00 | `industry-funnel` | 主题队列（`data/industry_funnel_queue.json`） |
+
+**默认凌晨 3 点**：GLM Coding Plan 是 5 小时刷新套餐，凌晨跑不挤占白天配额。
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/install-windows-tasks.ps1    # 安装任务
+powershell -ExecutionPolicy Bypass -File scripts/uninstall-windows-tasks.ps1  # 卸载
+schtasks /run /tn "AI-Berkshire-Portfolio-Weekly"                             # 立即触发测试
+python -m tools.scheduler portfolio-review              # 手动跑（不依赖任务计划程序）
+python -m tools.scheduler industry-funnel --from-queue  # 从主题队列取输入
+python -m tools.scheduler portfolio-review --dry-run    # 只打印命令、不调 claude
+python -m tools.scheduler list-queue && python -m tools.scheduler add-theme "AI算力"  # 主题队列管理
+```
+
+- 运行日志：`logs/scheduler/{skill}-{YYYYMMDD-HHMMSS}.json`（每个任务一次 JSON，含
+  stdout/stderr/exit_code/duration）；任务计划程序结果用
+  `schtasks /query /tn "AI-Berkshire-*" /v` 看 Last Run Time / Result。
+- **关键约束**：调度命令**不用 `--bare`**——会跳过 CLAUDE.md 项目指令（金融 Decimal /
+  中文报告风格 / Codex 同步）。
+- 模块：`tools/scheduler/runner.py`（核心，调 `claude -p` headless + 写 log）、
+  `tools/scheduler/__main__.py`（CLI 入口）、`scripts/run-scheduled-task.ps1`（任务入口）。
+- 设计文档：spec `docs/superpowers/specs/2026-07-05-pipeline-design.md` +
+  实施计划 `docs/superpowers/plans/2026-07-05-pipeline-mvp.md`。
+
+**不在本期做**：日频任务（`news-pulse` 盘前 / `thesis-tracker` 盘后，配额压力大）；
+热点驱动（RSS / 巨潮 / 政策文件 → LLM 分类，留下一期，`runner.py` 接口已预留）。
+
+## 报告语言与风格
+
+- 所有报告使用**中文**；风格直接、犀利、不说废话。
+- 数据必须标注来源，关键数据至少 2 个独立来源交叉验证，误差 >1% 告警。
+- 估计值必须注明"估计"；评分使用★符号（★1-5），不含半星。
+- 穿插巴菲特/芒格/段永平/李录的语录点评。
+
+## GitHub 工作流约定
+
+- 推送前先 `git pull --rebase origin main`（远程经常有新提交）；commit message 用中文，
+  描述清楚改了什么。
+- 不要推送中间过程文件（如 data_collection.md），只推最终报告；报告写完后主动询问
+  是否推送到 GitHub。
+- .gitignore 要点：`reports/portfolio-latest.md` 只存本地不公开；音视频大文件不入库；
+  `/local/` 永不入库；`.env` / `.env.smtp` / `data/fin_ai_cache/` / `logs/scheduler/*.json`
+  / `logs/daily-monitor/` 均只留本地。
+
+```bash
+cd ~/ai-berkshire && git add reports/xxx.md && git commit -m "添加xxx报告"
+git pull --rebase origin main && git push origin main
+```
+
+## 开发约定
+
+- 测试：`pytest tests/`（daily_monitor / fin_ai / scheduler 三套，15 个测试文件；
+  fin_ai 另有 e2e_checklist 手工清单）。
+- 依赖近 stdlib：requirements.txt 仅 `httpx>=0.27`，新增第三方依赖需充分理由；
+  代码风格遵循 `.editorconfig`（通用 2 空格、Python 4 空格、LF、UTF-8）。
+- 保留既有报告文件，除非任务明确要求修改；不因改工具/skill 顺手重写无关报告。
+- 改动范围限定在请求的 skill / tool / script / 文档；收尾前跑相应检查
+  （`sync-codex-skills.py --check`、`pytest`）。
