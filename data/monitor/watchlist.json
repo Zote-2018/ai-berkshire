@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "thresholds": {
+    "price_change_daily_pct": 5.0,
+    "price_change_5d_pct": 10.0,
+    "cost_drawdown_pct": 15.0,
+    "pe_undervalued": 8,
+    "pe_overvalued": 20,
+    "dividend_yield_high": 5.0,
+    "dividend_yield_low": 3.0,
+    "snapshot_history_days": 30
+  },
+  "positions": [],
+  "recommended": [
+    {
+      "code": "600690",
+      "name": "海尔智家",
+      "first_recommended_date": "2026-07-08",
+      "score_at_recommend": 4,
+      "still_recommended": true,
+      "last_checked_date": "2026-07-14"
+    },
+    {
+      "code": "601318",
+      "name": "中国平安",
+      "first_recommended_date": "2026-07-08",
+      "score_at_recommend": 4,
+      "still_recommended": true,
+      "last_checked_date": "2026-07-14"
+    },
+    {
+      "code": "600926",
+      "name": "杭州银行",
+      "first_recommended_date": "2026-07-08",
+      "score_at_recommend": 4,
+      "still_recommended": true,
+      "last_checked_date": "2026-07-14"
+    },
+    {
+      "code": "600036",
+      "name": "招商银行",
+      "first_recommended_date": "2026-07-08",
+      "score_at_recommend": 4,
+      "still_recommended": true,
+      "last_checked_date": "2026-07-14"
+    },
+    {
+      "code": "600887",
+      "name": "伊利股份",
+      "first_recommended_date": "2026-07-08",
+      "score_at_recommend": 4,
+      "still_recommended": true,
+      "last_checked_date": "2026-07-14"
+    }
+  ]
+}

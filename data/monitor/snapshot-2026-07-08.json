@@ -1,0 +1,85 @@
+{
+  "scan_date": "2026-07-08",
+  "stocks": {
+    "600690": {
+      "code": "600690",
+      "name": "海尔智家",
+      "price": 20.29,
+      "prev_close": 20.32,
+      "pe": 10.17,
+      "pb": 1.52,
+      "market_cap_yi": 1902.72,
+      "dividend_yield": 6.082996550024642,
+      "roe_history": [
+        16.98,
+        17.61,
+        17.24
+      ],
+      "score": 4
+    },
+    "601318": {
+      "code": "601318",
+      "name": "中国平安",
+      "price": 49.54,
+      "prev_close": 49.29,
+      "pe": 6.76,
+      "pb": 0.91,
+      "market_cap_yi": 8970.53,
+      "dividend_yield": 5.450141299959629,
+      "roe_history": [
+        14.0,
+        13.8,
+        9.7
+      ],
+      "score": 4
+    },
+    "600926": {
+      "code": "600926",
+      "name": "杭州银行",
+      "price": 15.4,
+      "prev_close": 15.34,
+      "pe": 5.68,
+      "pb": 0.81,
+      "market_cap_yi": 1116.35,
+      "dividend_yield": 6.103896103896102,
+      "roe_history": [
+        14.65,
+        16.0,
+        15.57
+      ],
+      "score": 4
+    },
+    "600036": {
+      "code": "600036",
+      "name": "招商银行",
+      "price": 37.94,
+      "prev_close": 37.55,
+      "pe": 6.35,
+      "pb": 0.84,
+      "market_cap_yi": 9568.41,
+      "dividend_yield": 7.941486557722721,
+      "roe_history": [
+        13.44,
+        14.49,
+        16.22
+      ],
+      "score": 4
+    },
+    "600887": {
+      "code": "600887",
+      "name": "伊利股份",
+      "price": 25.22,
+      "prev_close": 25.07,
+      "pe": 13.2,
+      "pb": 2.96,
+      "market_cap_yi": 1595.26,
+      "dividend_yield": 5.471847739888978,
+      "roe_history": [
+        20.87,
+        15.81,
+        20.2
+      ],
+      "score": 4
+    }
+  }
+}
